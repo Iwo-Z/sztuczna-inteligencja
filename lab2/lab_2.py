@@ -49,6 +49,9 @@
 # Dodatkowo w pliku `feature_names.json` znajdują się nazwy cech. Nazwy są bardzo długie, więc póki co nie będziemy z nich korzystać.
 
 # %% editable=true pycharm={"name": "#%%\n"} slideshow={"slide_type": ""}
+import warnings
+warnings.filterwarnings('ignore')
+
 import json
 import os
 
@@ -231,7 +234,7 @@ print("Solution is correct!")
 # %% [markdown] editable=true pycharm={"name": "#%% md\n"} slideshow={"slide_type": ""} tags=["ex"]
 # // skomentuj tutaj
 #
-# Jeśli auroc jest większy niż 0.5 to już na pewno jest lepiej niż klasyfikacja losowa. Wiemy, że gdyby auroc=1 to wyszłaby idealna predykcja (przeuczenie) więc jeśli mamy coś pomiędzy sytuacją losową, a przeuczeniem to jest okej, nie jest to wybitna sytuacja, ale akceptowalna
+# Jeśli auroc jest większy niż 0.5 to już na pewno jest lepiej niż klasyfikacja losowa. Wiemy, że gdyby auroc wynosiło 1 to wyszłaby idealna predykcja (overfitting) więc jeśli mamy coś pomiędzy sytuacją losową, a przeuczeniem to jest okej, nie jest to wybitna sytuacja, ale akceptowalna
 
 # %% [markdown] editable=true pycharm={"name": "#%% md\n"} slideshow={"slide_type": ""}
 # ## Uczenie zespołowe, bagging, lasy losowe
@@ -368,7 +371,7 @@ plt.show()
 # %% [markdown] editable=true pycharm={"name": "#%% md\n"} slideshow={"slide_type": ""} tags=["ex"]
 # // skomentuj tutaj
 #
-# Widzimy, że dzięki sm licznośc klas 0 i 1 się wyrównała, więc i Decision Tree i Random Forest mógł się lepiej nauczyć rozróżniania klas. Bez tego prawie zawsze przewidywałby "To raczej klasa 0"
+# Widzimy, że dzięki sm licznośc klas 0 i 1 się wyrównała, więc i Decision Tree i Random Forest mógł się lepiej nauczyć rozróżniania klas przez co wyniki auroc obydwóch są lepsze. Bez tego prawie zawsze przewidywałby "To raczej klasa 0"
 
 # %% [markdown] editable=true pycharm={"name": "#%% md\n"} slideshow={"slide_type": ""}
 # W dalszej części laboratorium używaj zbioru po zastosowaniu SMOTE do treningu klasyfikatorów.
@@ -398,6 +401,21 @@ plt.show()
 
 # %% editable=true pycharm={"is_executing": true, "name": "#%%\n"} slideshow={"slide_type": ""} tags=["ex"]
 # your_code
+from sklearn.model_selection import GridSearchCV
+
+params = {'max_features': [0.1, 0.2, 0.3, 0.4, 0.5]}
+
+gs = GridSearchCV(rfc, param_grid=params, cv=5, scoring="roc_auc")
+gs = gs.fit(X_train, y_train)
+
+print(gs.best_params_)
+
+best_gs = gs.best_estimator_
+y_prob = best_gs.predict_proba(X_test)[:, 1]
+
+auroc = roc_auc_score(y_test, y_prob)
+
+print(auroc)
 
 
 # %% editable=true slideshow={"slide_type": ""} tags=["ex"]
@@ -407,6 +425,8 @@ print("Solution is correct!")
 
 # %% [markdown] editable=true pycharm={"name": "#%% md\n"} slideshow={"slide_type": ""} tags=["ex"]
 # // skomentuj tutaj
+#
+# Parametr auroc zmienił się niewiele, więc patrząc na to, że na moim urządzeniu komórka wykonywała się około 12/13 minutach, uważam że dostrajanie max_features w tym przypadku jest zbędne. W zupełności wystarcza nam wynik auroc, otrzymany dzięki Random Forest
 
 # %% [markdown] editable=true pycharm={"name": "#%% md\n"} slideshow={"slide_type": ""}
 # W praktycznych zastosowaniach osoba trenująca model wedle własnego uznana, doświadczenia, dostępnego czasu i zasobów wybiera, czy dostrajać hiperparametry i w jak szerokim zakresie. Dla Random Forest na szczęście często może nie być znaczącej potrzeby i za to go lubimy :)
@@ -449,6 +469,16 @@ print("Solution is correct!")
 
 # %% editable=true pycharm={"is_executing": true, "name": "#%%\n"} slideshow={"slide_type": ""} tags=["ex"]
 # your_code
+import lightgbm
+
+lgbm = lightgbm.LGBMClassifier(importance_type="gain", random_state=0, n_jobs=-1, verbose=-1)
+lgbm = lgbm.fit(X_train, y_train)
+
+y_prob = lgbm.predict_proba(X_test)[:, 1]
+
+auroc = roc_auc_score(y_test, y_prob)
+
+print(auroc)
 
 
 # %% editable=true slideshow={"slide_type": ""} tags=["ex"]
@@ -458,6 +488,8 @@ print("Solution is correct!")
 
 # %% [markdown] editable=true pycharm={"name": "#%% md\n"} slideshow={"slide_type": ""} tags=["ex"]
 # // skomentuj tutaj
+#
+# Stosowanie boostingu prowadzi do lepszych wyników niż Random Forest, więc w tym przypadku warto go użyć. Jedyne czym powinniśmy się zająć w przypadku boostingu to tuning hiperparametrów.
 
 # %% [markdown] editable=true pycharm={"name": "#%% md\n"} slideshow={"slide_type": ""}
 # Boosting dzięki uczeniu na poprzednich drzewach redukuje nie tylko wariancję, ale też bias w błędzie, dzięki czemu może w wielu przypadkach osiągnąć lepsze rezultaty od lasu losowego. Do tego dzięki znakomitej implementacji LightGBM jest szybszy.
@@ -497,6 +529,40 @@ print("Solution is correct!")
 
 # %% editable=true pycharm={"is_executing": true, "name": "#%%\n"} slideshow={"slide_type": ""} tags=["ex"]
 # your_code
+from sklearn.model_selection import RandomizedSearchCV
+from sklearn.metrics import classification_report
+
+param_grid = {
+    "n_estimators": [100, 250, 500],
+    "learning_rate": [0.05, 0.1, 0.2],
+    "num_leaves": [31, 48, 64],
+    "colsample_bytree": [0.8, 0.9, 1.0],
+    "subsample": [0.8, 0.9, 1.0],
+}
+
+lgbm = lightgbm.LGBMClassifier(importance_type="gain", random_state=0, verbose=-1, n_jobs=-1)
+lgbm = lgbm.fit(X_train, y_train)
+
+y_pred = lgbm.predict(X_test)
+print("Model bazowy")
+print(classification_report(y_test, y_pred))
+
+rs = RandomizedSearchCV(lgbm, param_distributions=param_grid, n_iter=30, scoring="roc_auc", random_state=0, verbose=1)
+rs = rs.fit(X_train, y_train)
+
+print("Najlepsze hiperparametry")
+print(rs.best_params_)
+
+best_model = rs.best_estimator_
+
+y_pred = best_model.predict(X_test)
+y_prob = best_model.predict_proba(X_test)[:, 1]
+
+print("Model po strojeniu")
+print(classification_report(y_test, y_pred))
+
+auroc = roc_auc_score(y_test, y_prob)
+print(auroc)
 
 
 # %% editable=true slideshow={"slide_type": ""} tags=["ex"]
@@ -504,8 +570,14 @@ assert 0.9 <= auroc <= 0.99
 
 print("Solution is correct!")
 
+
 # %% [markdown] editable=true pycharm={"name": "#%% md\n"} slideshow={"slide_type": ""} tags=["ex"]
 # // skomentuj tutaj
+#
+# Precision wzrosła z 0.6 na 0.8 po strojeniu to znaczy że rzadziej klasyfikuje 0 jako 1 czyli mniej False Positive.
+# Recall spadł z 0.6 na 0.54 po strojeniu to znaczy że częściej zaklasyfikuje jako 0 niż jako 1 to znaczy że może być więcej False Negative
+#
+# Robimy tu taki kompromis po to, że jeśli zaklasyfikujemy do klasy 1 to mamy większą pewność, że będzie to faktycznie 1. W tym problemie, będzie to oznaczało, że będziemy mieli większą pewność jeśli zaklasyfikujemy, że nastąpi bankructwo w następnych 3 latach
 
 # %% [markdown] editable=true pycharm={"name": "#%% md\n"} slideshow={"slide_type": ""}
 # **Boosting - podsumowanie**
@@ -554,9 +626,40 @@ print("Solution is correct!")
 # %% editable=true slideshow={"slide_type": ""} tags=["ex"]
 # your_code
 
+def plot_features_importance(model, feature_names, title, importance_type=None):
+    if model == lgbm:
+        importances = model.booster_.feature_importance(importance_type=importance_type)
+        importances = importances / np.sum(importances)
+    else:
+        importances = model.feature_importances_
+    
+    feature_importances = pd.Series(importances, index=feature_names).sort_values(ascending=False)[:5]
+    
+    plt.figure(figsize=(8,4))
+    plt.bar(feature_importances.values, feature_importances.index)
+    plt.title(title, fontsize=14)
+    plt.xlabel("Importance", fontsize=12)
+    plt.ylabel("Feature", fontsize=12)
+    plt.xticks(rotation=45)
+    plt.tick_params(axis='x', labelsize=10)
+    plt.tight_layout()
+    plt.show()
+
+plot_features_importance(dtc, feature_names, "Top 5 most important features for Decision Tree")
+
+plot_features_importance(rfc, feature_names, "Top 5 most important features for Random Forest")
+
+plot_features_importance(lgbm, feature_names, "Top 5 most important features for LightGBM", importance_type="gain")
+
+
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["ex"]
 # // skomentuj tutaj
+#
+# Tak naprawde nie musze opisywać każdej cechy z osobna - wszystkie cechy odnoszą się do porównania zysku i straty, lub jakiegoś trendu (sales(n) / sales(n-1). Wszystki ete cechy logicznie wpływają na ryzyko bankructwa: 
+# większe straty niż zyski -> większe ryzyko
+# mniej sprzedaży niż było -> większe ryzyko
+# większe koszty niż przychody -> większe ryzyko
 
 # %% [markdown]
 # ### Dla zainteresowanych
