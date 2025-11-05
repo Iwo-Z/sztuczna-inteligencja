@@ -208,10 +208,17 @@ print("Solution is correct!")
 # your_code
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.tree import plot_tree
+from sklearn.metrics import roc_auc_score
 
 dtc = DecisionTreeClassifier(criterion="entropy", random_state=0)
 
 dtc = dtc.fit(X_train, y_train)
+
+y_prob = dtc.predict_proba(X_test)[:, 1]
+
+auroc = roc_auc_score(y_test, y_prob)
+
+print(auroc)
 
 plot_tree(dtc)
 plt.show()
@@ -223,6 +230,8 @@ print("Solution is correct!")
 
 # %% [markdown] editable=true pycharm={"name": "#%% md\n"} slideshow={"slide_type": ""} tags=["ex"]
 # // skomentuj tutaj
+#
+# Jeśli auroc jest większy niż 0.5 to już na pewno jest lepiej niż klasyfikacja losowa. Wiemy, że gdyby auroc=1 to wyszłaby idealna predykcja (przeuczenie) więc jeśli mamy coś pomiędzy sytuacją losową, a przeuczeniem to jest okej, nie jest to wybitna sytuacja, ale akceptowalna
 
 # %% [markdown] editable=true pycharm={"name": "#%% md\n"} slideshow={"slide_type": ""}
 # ## Uczenie zespołowe, bagging, lasy losowe
@@ -261,6 +270,17 @@ print("Solution is correct!")
 
 # %% editable=true pycharm={"name": "#%%\n"} slideshow={"slide_type": ""} tags=["ex"]
 # your_code
+from sklearn.ensemble import RandomForestClassifier
+
+rfc = RandomForestClassifier(n_estimators=500, n_jobs=-1, criterion="entropy", random_state=0)
+
+rfc = rfc.fit(X_train, y_train)
+
+y_prob = rfc.predict_proba(X_test)[:, 1]
+
+auroc = roc_auc_score(y_test, y_prob)
+
+print(auroc)
 
 
 # %% editable=true slideshow={"slide_type": ""} tags=["ex"]
@@ -270,6 +290,8 @@ print("Solution is correct!")
 
 # %% [markdown] editable=true pycharm={"name": "#%% md\n"} slideshow={"slide_type": ""} tags=["ex"]
 # // skomentuj tutaj
+#
+# Wynik tak jak się spodziewaliśmy polepszył się, ponieważ zamiast 1 drzewa, robimy ich 500 i wynik uśredniamy. Przez to ze robimy to metodą RandomForest to każde drzewo będzie klasyfikowało w inny, wylosowany wcześniej sposób, przez co pojedyncze wyniki będą zróżnicowane, co przełoży się na dobry, uśredniony wynik
 
 # %% [markdown] editable=true pycharm={"name": "#%% md\n"} slideshow={"slide_type": ""}
 # Jak zobaczymy poniżej, wynik ten możemy jednak jeszcze ulepszyć!
@@ -304,8 +326,31 @@ print("Solution is correct!")
 #
 # Wartość ROC drzewa decyzyjnego przypisz do zmiennej `tree_roc`, a lasu do `forest_roc`.
 
+# %%
+y_train.value_counts().plot.bar(title="Class frequencies")
+plt.xlabel("Class")
+plt.ylabel("Frequency")
+plt.show()
+
 # %% editable=true pycharm={"name": "#%%\n"} slideshow={"slide_type": ""} tags=["ex"]
 # your_code
+from imblearn.over_sampling import SMOTE
+
+sm = SMOTE(random_state=0)
+
+X_train, y_train = sm.fit_resample(X_train, y_train)
+
+dtc = dtc.fit(X_train, y_train)
+rfc = rfc.fit(X_train, y_train)
+
+y_prob_tree = dtc.predict_proba(X_test)[:, 1]
+y_prob_forest = rfc.predict_proba(X_test)[:, 1]
+
+tree_roc = roc_auc_score(y_test, y_prob_tree)
+forest_roc = roc_auc_score(y_test, y_prob_forest)
+
+print(tree_roc)
+print(forest_roc)
 
 
 # %% editable=true slideshow={"slide_type": ""} tags=["ex"]
@@ -314,8 +359,16 @@ assert 0.8 < forest_roc < 0.95
 
 print("Solution is correct!")
 
+# %%
+y_train.value_counts().plot.bar(title="Class frequencies")
+plt.xlabel("Class")
+plt.ylabel("Frequency")
+plt.show()
+
 # %% [markdown] editable=true pycharm={"name": "#%% md\n"} slideshow={"slide_type": ""} tags=["ex"]
 # // skomentuj tutaj
+#
+# Widzimy, że dzięki sm licznośc klas 0 i 1 się wyrównała, więc i Decision Tree i Random Forest mógł się lepiej nauczyć rozróżniania klas. Bez tego prawie zawsze przewidywałby "To raczej klasa 0"
 
 # %% [markdown] editable=true pycharm={"name": "#%% md\n"} slideshow={"slide_type": ""}
 # W dalszej części laboratorium używaj zbioru po zastosowaniu SMOTE do treningu klasyfikatorów.
