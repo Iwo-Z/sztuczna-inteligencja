@@ -207,7 +207,10 @@ def optimize(
     errors = y - y_hat
     # implement me!
     # your_code
-    
+    n = y.shape[0]
+    a_update = a - learning_rate * (-2 / n * sum((y - y_hat)*x))
+    b_update = b - learning_rate * (-2 / n * sum(y - y_hat))
+    return a_update, b_update
 
 
 
