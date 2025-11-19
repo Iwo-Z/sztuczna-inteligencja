@@ -401,7 +401,7 @@ print("final loss:", loss)
 # Poniżej znajduje się kod do ściągnięcia i preprocessingu zbioru. Nie musisz go dokładnie analizować.
 
 # %% colab={"base_uri": "https://localhost:8080/"} editable=true id="4DNsaZAnLAs0" outputId="70822008-530d-4173-deb9-8149a9fe5b41" slideshow={"slide_type": ""}
-# !wget https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data
+# # !wget https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data
 
 # %% editable=true slideshow={"slide_type": ""}
 import pandas as pd
@@ -508,7 +508,7 @@ categorical_X_valid = X_valid.loc[:, ~X_valid.columns.isin(continuous_cols)]
 continuous_X_test = X_test[continuous_cols]
 categorical_X_test = X_test.loc[:, ~X_test.columns.isin(continuous_cols)]
 
-categorical_encoder = OneHotEncoder(sparse=False, handle_unknown='ignore')
+categorical_encoder = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
 continuous_scaler = StandardScaler() #MinMaxScaler(feature_range=(-1, 1))
 
 categorical_encoder.fit(categorical_X_train)
@@ -573,13 +573,32 @@ plt.show()
 # %% colab={"base_uri": "https://localhost:8080/"} id="NbABKz5-LAs2" outputId="086dc0f3-0184-4072-9fd3-275b60dee2e4" tags=["ex"]
 learning_rate = 1e-3
 
-model = ...
-activation = ...
-optimizer = ...
-loss_fn = ...
+model = nn.Linear(X_train.shape[1], y_train.shape[0])
+activation = nn.Sigmoid()
+optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
+loss_fn = nn.BCELoss()
 
 # implement me!
 # your_code
+
+for i in range(3000):
+    y_hat = model(X_train) # wejście na logit
+
+    y_hat = activation(y_hat) # aktywacja sigmoidą żeby przerobić logity na prawdopodobieństwa
+
+    loss = loss_fn(y_hat, y_train)
+    
+    loss.backward() # liczymy gradienty
+    
+    X_train.optimizer() # update wag z policzonych gradientów
+
+    X_train.data.zero_()# zerujemy gradienty dla przyszłych epok
+
+    if i % 100 == 0:
+        print(f"step {i} loss: ", loss)
+
+print("final loss:", loss)
+    
 
 
 # %% [markdown] tags=["ex"]
