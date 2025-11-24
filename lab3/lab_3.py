@@ -573,7 +573,7 @@ plt.show()
 # %% colab={"base_uri": "https://localhost:8080/"} id="NbABKz5-LAs2" outputId="086dc0f3-0184-4072-9fd3-275b60dee2e4" tags=["ex"]
 learning_rate = 1e-3
 
-model = nn.Linear(X_train.shape[1], y_train.shape[0])
+model = nn.Linear(X_train.shape[1], 1)
 activation = nn.Sigmoid()
 optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
 loss_fn = nn.BCELoss()
@@ -590,16 +590,14 @@ for i in range(3000):
     
     loss.backward() # liczymy gradienty
     
-    X_train.optimizer() # update wag z policzonych gradientów
+    optimizer.step() # update wag z policzonych gradientów
 
-    X_train.data.zero_()# zerujemy gradienty dla przyszłych epok
+    optimizer.zero_grad()# zerujemy gradienty dla przyszłych epok
 
     if i % 100 == 0:
-        print(f"step {i} loss: ", loss)
+        print(f"step {i} loss: ", loss.item())
 
-print("final loss:", loss)
-    
-
+print("final loss:", loss.item())
 
 # %% [markdown] tags=["ex"]
 # Teraz trzeba sprawdzić, jak poszło naszej sieci. W PyTorchu sieć pracuje zawsze w jednym z dwóch trybów: treningowym lub ewaluacyjnym (predykcyjnym). Ten drugi wyłącza niektóre mechanizmy, które są używane tylko podczas treningu, w szczególności regularyzację dropout. Do przełączania służą metody modelu `.train()` i `.eval()`.
@@ -783,10 +781,18 @@ class MLP(nn.Module):
 
         # implement me!
         # your_code
+        self.mlp = nn.Sequential(
+            nn.Linear(input_size, 256),
+            nn.ReLU(),
+            nn.Linear(256, 128),
+            nn.ReLU(),
+            nn.Linear(128, 1)
+        )
 
     def forward(self, x):
         # implement me!
         # your_code
+        return self.mlp(x)
 
     def predict_proba(self, x):
         return sigmoid(self(x))
@@ -899,10 +905,42 @@ def evaluate_model(
     # implement me!
     # your_code
 
+    model.eval()
+
+    with torch.no_grad():
+        logits = model(X)
+
+        loss = loss_fn(logits, y).item()
+
+        y = y.cpu().numpy()
+        probs = sigmoid(logits).cpu().numpy()
+
+        if threshold is None:
+            precisions, recalls, thresholds = precision_recall_curve(y, probs)
+            _, threshold = get_optimal_threshold(precisions, recalls, thresholds)
+
+        preds = (probs > threshold).astype(int)
+
+        auroc = roc_auc_score(y, probs)
+    
+        precision = precision_score(y, preds)
+        recall = recall_score(y, preds)
+        f1 = f1_score(y, preds)
+            
+
+    return {
+        "loss": loss,
+        "AUROC": auroc,
+        "threshold": threshold,
+        "precision": precision,
+        "recall": recall,
+        "F1-score": f1
+    }
+    
 
 
 # %% tags=["ex"]
-eval_result = evaluate_model(model, X_train, y_train, loss_fn)
+eval_result = evaluate_model(model, X_test, y_test, loss_fn)
 
 assert 0.5 < eval_result["loss"] < 0.6
 assert 0.6 < eval_result["AUROC"] < 0.9
@@ -925,10 +963,20 @@ class RegularizedMLP(nn.Module):
 
         # implement me!
         # your_code
+        self.reg_mlp = nn.Sequential(
+            nn.Linear(input_size, 256),
+            nn.Dropout(p = dropout_p),
+            nn.ReLU(),
+            nn.Linear(256, 128),
+            nn.Dropout(p = dropout_p),
+            nn.ReLU(),            
+            nn.Linear(128, 1)
+        )
     
     def forward(self, x):
         # implement me!
         # your_code
+        return self.reg_mlp(x)
 
     def predict_proba(self, x):
         return sigmoid(self(x))
@@ -1025,6 +1073,8 @@ max_epochs = 300
 early_stopping_patience = 4
 
 # %% tags=["ex"]
+import copy
+
 model = RegularizedMLP(
     input_size=X_train.shape[1], 
     dropout_p=dropout_p
@@ -1053,10 +1103,27 @@ for epoch_num in range(max_epochs):
         # model training
         # implement me!
         # your_code
+        logits = model(X_batch)
+
+        loss = loss_fn(logits, y_batch)
+        loss.backward()
+
+        optimizer.step()
+        optimizer.zero_grad()
     
     # model evaluation, early stopping
     # implement me!
     # your_code
+    valid_metrics = evaluate_model(model, X_valid, y_valid, loss_fn)
+
+    steps_without_improvement += 1
+    if valid_metrics["loss"] < best_val_loss:
+        best_val_loss = valid_metrics["loss"]
+        best_model = copy.deepcopy(model)
+        best_threshold = valid_metrics["threshold"]
+        steps_without_improvement = 0
+    elif steps_without_improvement >= early_stopping_patience:
+        break
     
     print(f"Epoch {epoch_num} train loss: {loss.item():.4f}, eval loss {valid_metrics['loss']}")
 
@@ -1107,6 +1174,17 @@ class NormalizingMLP(nn.Module):
 
         # implement me!
         # your_code
+        self.mlp = nn.Sequential(
+            nn.Linear(input_size, 256),
+            nn.BatchNorm1d(256),
+            nn.Dropout(p = dropout_p),
+            nn.ReLU(),
+            nn.Linear(256, 128),
+            nn.BatchNorm1d(128),
+            nn.Dropout(p = dropout_p),
+            nn.ReLU(),            
+            nn.Linear(128, 1)
+        )
     
     def forward(self, x):
         return self.mlp(x)
@@ -1121,14 +1199,86 @@ class NormalizingMLP(nn.Module):
 
 
 # %% tags=["ex"]
-# define all the hyperparameters
-# your_code
-
-
-# %% tags=["ex"]
 # training loop
 # your_code
+from sklearn.utils.class_weight import compute_class_weight
 
+y_train = y_train.detach().cpu().numpy().ravel().astype(int)
+
+class_weights = compute_class_weight(
+    class_weight="balanced",
+    classes=np.unique(y_train),
+    y=y_train
+)
+
+pos_w = torch.tensor([class_weights[1]], dtype=torch.float32)
+
+model = NormalizingMLP(
+    input_size=X_train.shape[1], 
+    dropout_p=dropout_p
+)
+optimizer = torch.optim.AdamW(
+    model.parameters(), 
+    lr=learning_rate, 
+    weight_decay=l2_reg
+)
+loss_fn = torch.nn.BCEWithLogitsLoss(
+    pos_weight=pos_w
+)
+
+train_dataset = MyDataset(X_train, y_train)
+train_dataloader = DataLoader(train_dataset, batch_size=batch_size)
+
+steps_without_improvement = 0
+
+best_val_loss = np.inf
+best_model = None
+best_threshold = None
+
+for epoch_num in range(max_epochs):
+    model.train()
+    
+    # note that we are using DataLoader to get batches
+    for X_batch, y_batch in train_dataloader:
+        # model training
+        # implement me!
+        # your_code
+        y_batch = y_batch.view(-1, 1).float()
+        
+        logits = model(X_batch)
+
+        loss = loss_fn(logits, y_batch)
+        loss.backward()
+
+        optimizer.step()
+        optimizer.zero_grad()
+    
+    # model evaluation, early stopping
+    # implement me!
+    # your_code
+    valid_metrics = evaluate_model(model, X_valid, y_valid, loss_fn)
+
+    steps_without_improvement += 1
+    if valid_metrics["loss"] < best_val_loss:
+        best_val_loss = valid_metrics["loss"]
+        best_model = copy.deepcopy(model)
+        best_threshold = valid_metrics["threshold"]
+        steps_without_improvement = 0
+    elif steps_without_improvement >= early_stopping_patience:
+        break
+    
+    print(f"Epoch {epoch_num} train loss: {loss.item():.4f}, eval loss {valid_metrics['loss']}")
+
+# %% tags=["ex"]
+# define all the hyperparameters
+# your_code
+learning_rate = 1e-3
+dropout_p = 0.5
+l2_reg = 1e-4
+batch_size = 128
+max_epochs = 300
+
+early_stopping_patience = 4
 
 
 # %% tags=["ex"]
