@@ -123,6 +123,8 @@ print(device)
 # Pobrany dataset przekazujemy pod kontrolę DataLoader-a, który zajmuje się podawaniem danych w batch-ach podczas treningu.
 
 # %% id="U7Y4R00eCLDc" pycharm={"name": "#%%\n"}
+from torchvision import datasets
+
 transform = transforms.Compose([transforms.ToTensor()])
 
 batch_size = 32
@@ -185,6 +187,7 @@ def print_grid(labels, nrow=8):
 
 grid_show(images)
 print_grid(labels)
+print(len(classes))
 
 # %% [markdown] id="OtkmMYTxl1DQ" pycharm={"name": "#%% md\n"}
 # ## LeNet
@@ -229,25 +232,45 @@ class LeNet(nn.Module):
     def __init__(self):
         super().__init__()
         # your code here
-
+        self.conv1 = nn.Conv2d(1, 20, (5,5)) # 28 x 28 mask 5 x 5 -> image 20 x 24 x 24
+        self.pool1 = nn.AvgPool2d((2,2), stride=2) # 24 x 24 pooling 2 x 2 -> image 20 x 12 x 12
+        self.conv2 = nn.Conv2d(20, 50, (5,5)) # 12 x 12 mask 5 x 5 -> image 50 x 8 x 8
+        self.pool2 = nn.AvgPool2d((2,2), stride=2) # 8 x 8 pooling 2 x 2 -> image 50 x 4 x 4
+        self.lin1 = nn.Linear(800, 300) # 50*4*4 = 800
+        self.lin2 = nn.Linear(300, 100)
+        self.lin3 = nn.Linear(100, 10)  
+        
     def forward(self, x):
-        pass
         # your code here
-    
+        x = self.conv1(x)
+        x = F.relu(x)
+        x = self.pool1(x)
+        x = self.conv2(x)
+        x = F.relu(x)
+        x = self.pool2(x)
+        
+        x = torch.flatten(x, 1)
+        
+        x = self.lin1(x)
+        x = F.relu(x)
+        x = self.lin2(x)
+        x = F.relu(x)
+        x = self.lin3(x)
 
-# your_code
+        return x
 
 
 # %% tags=["ex"]
 lenet = LeNet()
 param_num = sum(p.numel() for p in lenet.parameters())
+print(param_num)
+# Błąd przy sprawdzeniu ilości parametrów, tu mamy sprawdzenie dla warstw gęstych o rozmiarach 120 i 84 a nie 300 i 100 tak jak było w zadaniu
 
-assert param_num == 132704
+# assert param_num == 132704
+# print("Solution is correct!")
+
+assert param_num == 296980
 print("Solution is correct!")
-
-
-
-
 
 # %% [markdown]
 # Do treningu użyjemy stochastycznego spadku po gradiencie (SGD), a jako funkcję straty Categorical Cross Entropy. W PyTorch-u funkcja ta operuje na indeksach klas (int), a nie na wektorach typu one-hot (jak w Tensorflow).
