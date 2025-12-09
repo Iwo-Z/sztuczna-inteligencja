@@ -292,10 +292,19 @@ optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 net.train()
 
 for epoch in range(5):
-# your_code
+    for images, labels in trainloader:
+        optimizer.zero_grad()
+    
+        outputs = net(images.to(device))
+        loss = criterion(outputs, labels)
+    
+        loss.backward()
+    
+        optimizer.step()
+
+    print(f"epoch: {epoch} loss: {loss.item()}")
 
 
-# %%
 
 # %% [markdown]
 # Zobaczmy na kilku przykładach jak działa wytrenowana sieć.
