@@ -38,7 +38,7 @@
 # Sprawdźmy, czy mamy dostęp do środowiska wyposażonego w akcelerator NVidii:
 
 # %% colab={"base_uri": "https://localhost:8080/"} id="G8OgLsVgK0bK" outputId="b7af210f-99d0-40eb-febb-230e98a17e9c"
-# !nvidia-smi
+# # !nvidia-smi
 
 # %% [markdown] id="9iHWHwumLJy-"
 # Jeśli akcelerator jest niedostępny (polecenie skończyło się błędem), to zmieniamy środowisko wykonawcze wybierając z menu "Środowisko wykonawcze" -> "Zmień typ środowiska wykonawczego" -> GPU.
@@ -52,8 +52,8 @@
 # W tym celu montujemy dysk Google w Colabie. Wymaga to autoryzacji narzędzia Colab w Google Drive.
 
 # %% colab={"base_uri": "https://localhost:8080/"} id="ysEoT8AhFoA4" outputId="f9116535-35d9-4eed-e851-b42037e1c76b"
-from google.colab import drive
-drive.mount('/content/gdrive')
+# from google.colab import drive
+# drive.mount('/content/gdrive')
 
 # %% [markdown] id="grytPGtiFoA4"
 # Po podmontowaniu dysku mamy dostęp do całej zawartości Google Drive. Wskazując miejsce zapisywania danych w trakcie treningu należy wskazać ścieżkę zaczynającą się od `/content/gdrive`, ale należy wskazać jakiś podkatalog w ramach naszej przestrzeni dyskowej. Pełna ścieżka może mieć postać `/content/gdrive/MyDrive/output`. Przed uruchomieniem treningu warto sprawdzić, czy dane zapisują się na dysku.
@@ -65,7 +65,7 @@ drive.mount('/content/gdrive')
 # Podobnie jak w poprzednich laboratoriach optymalnym sposobem instalacji bibliotek jest wykorzystanie narzędzia Poetry, które ma ustalone wersje bibliotek w pliku `poetry.lock`. Biblioteki te zostały zmodyfikowane względem wcześniejszych laboratoriów, dlatego ponownie powinniśmy je zainstalować.
 
 # %% colab={"base_uri": "https://localhost:8080/"} id="eeJtMsvBJ48f" outputId="8693a6df-7e23-4a54-c445-271558041468"
-# !poetry install --no-root
+# # !poetry install --no-root
 
 # %% [markdown] id="bJunO6pV_tRK"
 # Mając zainstalowane niezbedne bilioteki, możemy skorzystać ze wszystkich modeli i zbiorów danych zarejestrowanych w katalogu.
@@ -78,8 +78,10 @@ drive.mount('/content/gdrive')
 
 # %% colab={"base_uri": "https://localhost:8080/", "height": 153, "referenced_widgets": ["b96eb9421cbe46e2b5337c82e3a2e839", "e32c889a9a1840d2a961a3b1920c4da3", "2e816320fd00496688e9b4121dd1ec28", "62cfbc846e4e435e92decf6bcab44375", "5af1afeef3634306a0953e1f10597df5", "6613e338df13463bad85c68f917b60de", "7e1265f972624800a772615da1f1a176", "482b5ffcefbe4406942cc7f952aa092a", "5ca44edf87be47d696c76d2d659c4dda", "8f37dd6dd6d74a62a08e35b7231c25d7", "1291756e918540ffbdcf1ab4a8cad944", "c0f73f8b47414b19b97f201f0a4d2be2", "cef2f0828e784f618c2550123fb63af0", "77a21d81f1e1459ab0a87c01eb1a445b", "6492baaa271c453e87d6856ff591580c", "df366d3af5c34ae2a19b294be6436f02", "62de05a073b84aebb79b09a09e9b44a1", "1954d11aa2f64770bb5536bfc68537ee", "7e5c28750b7e40eba2499716b82d0428", "f96d575dc02c4512985c35dca0ac2357", "b9df08225d3d4690bba012a66649998e", "a0223cea6fd04faea59ec2f151641e23"]} editable=true id="wTCDkZ1nKIEm" outputId="7bc53054-0acc-45d6-fb41-ad63296d1580" slideshow={"slide_type": ""}
 from transformers import AutoModelForMaskedLM, AutoTokenizer
+from transformers import logging
+logging.set_verbosity_error()
 
-model = AutoModelForMaskedLM.from_pretrained("bert-base-cased")
+model = AutoModelForMaskedLM.from_pretrained("bert-base-cased");
 
 # %% [markdown] editable=true id="RCHU5ArMJZfC" slideshow={"slide_type": ""}
 # Załadowany model jest modułem PyTorcha. Możemy zatem korzystać z API tej biblioteki. Możemy np. sprawdzić ile parametrów ma model BERT base:
@@ -121,7 +123,7 @@ tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
 tokenizer
 
 # %% [markdown] editable=true id="rXIePLylEFx2" slideshow={"slide_type": ""}
-# Tokenizer posługuje się słownikiem o stałym rozmiarze. Podowuje to oczywiście, że nie wszystkie wyrazy występujące w tekście będą się w nim znajdowały. Co więcej, jeśli użyjemy tokenizera do podziału tekstu w innym języku, niż ten dla którego został on stworzony, to taki tekst będzie dzielony na większą liczbę tokenów.
+# Tokenizer posługuje się słownikiem o stałym rozmiarze. Powoduje to oczywiście, że nie wszystkie wyrazy występujące w tekście będą się w nim znajdowały. Co więcej, jeśli użyjemy tokenizera do podziału tekstu w innym języku, niż ten dla którego został on stworzony, to taki tekst będzie dzielony na większą liczbę tokenów.
 
 # %% colab={"base_uri": "https://localhost:8080/"} editable=true id="DAGb1Jzhtr9p" outputId="4b910774-f2e7-4c85-bab5-16f7753a528c" slideshow={"slide_type": ""}
 sentence1 = tokenizer.encode(
@@ -152,10 +154,29 @@ print("|".join(tokenizer.convert_ids_to_tokens(list(sentence2[0]))))
 
 # %% colab={"base_uri": "https://localhost:8080/", "height": 457, "referenced_widgets": ["9b11a07b59df4bd7a853bb76df3c71dc", "7cc01b93d5e54c1cb79c474fcbd2754f", "b6fac2c413ba4be78cf13583c2e5c877", "c5ddc8194d6f45b9b66abcd57b17aa58", "e820d9434cfb4ddaa208412a58773d82", "6e7ed1db13cf4448b6f36e2510ae2507", "3bb7a8c2b2054012be1d884eef23d505", "3bb07061a6024ec281969b0151658ac0", "b9197b9343f141d8839eff6417ff7a7e", "5ab2a019c37d45c484e140181e2a4b5f", "e45326d1e8e445bda5ac37a0e0b941cf", "042e870742654c92802e294bf0a3c3c5", "2d99f2e5e3ff4e31a3d14c962a289102", "a2695ddd281f4d1a8073da20a1fa63fc", "3ac830a291414392afe03db8ebd2df0c", "b24ce8a86d474f708af8c1400879d366", "444b364a4c51426b960f9d75d8b3edf1", "117f9d0d423d4cb6985d3b4f5ba7a508", "61cfe8d30bf649c7887dffd8f4c3b9df", "46a1dce55efb40e098da85c193e99dc4", "3bde6d45cbfd4091821a5d48bfef1d31", "29152d86c7394e839a4603d2e1e11228", "edb36e6acc4146f8adcb30d0ba5620ec", "876185512d7245babfa0e4fb46c63665", "468273b1b92f47a5af89e8106c615892", "20cb37a53c474c6cb387211003297dc4", "b76376cf2d4b4f08ac9cc363dbf7c5e5", "b4f4bf0e29014a6c8d1fbc9c3aca5271", "3e6f55a9affa4862bb1998f909439fb2", "dcf349378e484fa7b87a4ada48d7a620", "b52882f9eb0047a5a4233a2d68923e75", "b94e946993bd4ee88286dbadfe482c9d", "02ef0f4798984959aea79e0539d35806", "16f746349ae3413aa0684dc8cb19b9bd", "52eb118ab50b4f78aaf0dabd9cc77f77", "f0243b198ecb42cfbe64fffa02b31cba", "05b36b4419f24addbaed26c74cb5c379", "5ad337d030cb45e5b12800dae072bc37", "fe0a3e4466084949a4e918c71be6c9b6", "35dc48ad124a4b8b8fe99f8b1a4c9956", "0c2d72a8008849ada486f89b0ffafe97", "4a5236c4d84649b788e8831d70af2023", "c2b61943667f4905a51432b5f1f413e5", "c27a057656c94bd590c9f466c4852548", "13b64566f14e4013ad7bba331a3c34b0", "38a83363c86c4cf1ba9ce3646bf96edc", "6a82165db71641c2883930b2801335cc", "e1c82ec3cc8e4229b7fb5ecc8a643dd2", "d0d3a2153803478a8ce419f7987f6fa5", "43c96c230ba2415891eafe4794e7bffa", "35039665d3204a258ab5eae36bff0a5a", "9642100895eb4cb18952e09bc392c2b4", "25e71dd113b94abb83b90bb9d7b268fc", "28c3a01713a940499382a14ca46a1fa2", "f532f651f50d4461948c8e821aa889a9"]} editable=true id="qEir3EhlHHaQ" outputId="adef2677-a426-4f8a-aa4a-41677b5a3455" slideshow={"slide_type": ""} tags=["ex"]
 # your_code
+tokenizer_herbert = AutoTokenizer.from_pretrained("allegro/herbert-base-cased")
+
+text_eng = "The quick brown fox jumps over the lazy dog."
+text_pl = "Zażółć gęślą jaźń."
+
+sentence1_herbert = tokenizer_herbert.encode(
+        text_eng, return_tensors="pt"
+    )
+print(sentence1_herbert)
+print(sentence1_herbert.shape)
+
+sentence2_herbert = tokenizer_herbert.encode(
+        text_pl, return_tensors="pt"
+    )
+print(sentence2_herbert)
+print(sentence2_herbert.shape)
+
+print("|".join(tokenizer_herbert.convert_ids_to_tokens(list(sentence1_herbert[0]))))
+print("|".join(tokenizer_herbert.convert_ids_to_tokens(list(sentence2_herbert[0]))))
 
 
-# %% [markdown] editable=true id="US-hA9UMOPk_" slideshow={"slide_type": ""} tags=["ex"]
-#
+# %% [markdown]
+# Herbert naturalnie lepiej radzi sobie z polskim tekstem bo jest wytrenowany na polskich zdaniach przez allegro, a na angielskim tekscie w porównaniu do klasycznego berta radzi sobie gorzej
 
 # %% [markdown] editable=true id="HJquTQTDHLQY" slideshow={"slide_type": ""}
 # W wynikach tokenizacji poza wyrazami/tokenami występującymi w oryginalnym tekście pojawiają się jeszcze dodatkowe znaczniki `[CLS]` oraz `[SEP]` (albo inne znaczniki - w zależności od użytego słownika). Mają one specjalne znaczenie i mogą być wykorzystywane do realizacji specyficznych funkcji związanych z analizą tekstu. Np. reprezentacja tokenu `[CLS]` wykorzystywana jest w zadaniach klasyfikacji zdań. Z kolei token `[SEP]` wykorzystywany jest do odróżnienia zdań, w zadaniach wymagających na wejściu dwóch zdań (np. określenia, na ile zdania te są podobne do siebie).
@@ -202,7 +223,7 @@ words = tokenizer.convert_ids_to_tokens(top.indices)
 # %% colab={"base_uri": "https://localhost:8080/", "height": 447} editable=true id="kmDVEzZQ2Omz" outputId="6f25cbcd-5b9b-4323-aec6-794d9b000e5b" slideshow={"slide_type": ""}
 import matplotlib.pyplot as plt
 
-plt.bar(words, top.values.cpu().detach().numpy())
+plt.bar(words, top.values.cpu().detach().numpy());
 
 
 # %% [markdown] editable=true id="792etHKPSZrx" slideshow={"slide_type": ""}
@@ -244,10 +265,86 @@ def plot_words(sentence, word_model, word_tokenizer, mask="[MASK]"):
 
 
 # your_code
+mask_token = tokenizer_herbert.mask_token
+print(f"Mask token used by HerBERT: {mask_token}\n")
+
+model_herbert = AutoModelForMaskedLM.from_pretrained("allegro/herbert-base-cased")
+model_herbert.to(device)
 
 
-# %% [markdown] editable=true id="C0D3wjqU5E7s" slideshow={"slide_type": ""} tags=["ex"]
+# %%
+# odmiany przez polskie przypadki
+
+cases = [
+    "Pies biega po <mask>.",
+    "Widzę <mask> płynącą po wodzie.",
+    "Widzę kaczkę <mask> po wodzie.",
+]
+
+for case in cases:
+    plot_words(case, model_herbert, tokenizer_herbert, "<mask>")
+
+# uwzględniania długodystansowych związków w tekście
+
+cases = [
+    "Polska aktorka, która zdobyła wiele nagród za swoje <mask>, jest bardzo znana.",
+    "W tym domu, gdzie mieszkaliśmy przez dziesięć lat, spędziliśmy wiele <mask>.",
+    "Książka, którą kupiłem wczoraj w sklepie, jest niezwykle <mask>.",
+]
+
+for case in cases:
+    plot_words(case, model_herbert, tokenizer_herbert, "<mask>")
+
+# reprezentowania wiedzy o świecie
+
+cases = [
+    "Stolicą Polski jest <mask>.",
+    "Najwyższą górą Polski są <mask>.",
+    "Populacja Polski wynosi <mask>."
+]
+
+for case in cases:
+    plot_words(case, model_herbert, tokenizer_herbert, "<mask>")
+
+
+# %% [markdown]
+# ## Wnioski
 #
+# ### odmiany przez polskie przypadki
+#     "Pies biega po [MASK]."
+# Dobrze dopasował, wszystkie słowa są dobrze odmienione i prawdopodobne
+#
+#     "Widzę [MASK] płynącą po wodzie."
+#     
+# Wszystkie słowa są odmienione poprawnie, ale "rzeka płynąca po wodzie" jest niepoprawna semantycznie
+#     
+#     "Widzę kaczkę [MASK] po wodzie."
+#     
+# Niby odmiana poprawna, ale całkowita porażka jak chodzi o sens
+#
+# ### uwzględniania długodystansowych związków w tekście
+#
+#     "Polska aktorka, która zdobyła wiele nagród za swoje [MASK], jest bardzo znana."
+#     "W tym domu, gdzie mieszkaliśmy przez dziesięć lat, spędziliśmy wiele [MASK]."
+#     
+# Dobrze dopasował, wszystkie słowa są dobrze odmienione i zgodne z kontekstem, dobrze dopasował co jets podmiotem
+#     
+#     "Książka, którą kupiłem wczoraj w sklepie, jest niezwykle [MASK]."
+#
+# Tutaj dopasował bardzo proste przymiotniki, teoretycznie książka może być "ładna" ale najczęściej mamy na myśli treść książki więc na wyższych miejscach spodziewalibyśmny się przymiotników opisujących tego typu cechy
+#
+# ### reprezentowania wiedzy o świecie
+#     "Stolicą Polski jest [MASK]."
+#
+# Podał poprawną odpowiedź na pierwszym miejscu, ale potem podawał błędne ale najczęstsze odpowiedzi
+#     
+#     "Najwyższą górą Polski są [MASK]."
+#
+# Kompletnie się rozjechał, nie zrozumiał sensu i logiki zdania oraz brak faktów
+#     
+#     "Populacja Polski wynosi [MASK]."
+#
+# Nie zrozumiał sprawy, wygląda to na przypadkowe liczby, gdy są to twarde dane
 
 # %% [markdown] editable=true id="qe3jkYN4X0K6" slideshow={"slide_type": ""}
 # # Klasyfikacja tekstu
