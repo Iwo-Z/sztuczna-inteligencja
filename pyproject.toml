@@ -17,6 +17,7 @@ dependencies = [
     "jupytext",
     "lightgbm==4.*",
     "matplotlib",
+    "numba>=0.63.1",
     "numpy",
     "pandas",
     "sacremoses>=0.1.1",
